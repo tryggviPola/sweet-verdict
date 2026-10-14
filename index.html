@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sweet Verdict</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sweet Verdict">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f2f5f3">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+:root{--bg:#f2f5f3;--card:#fff;--ink:#16211b;--mute:#5b6a62;--line:#d9e1dc;
+--g:#1b7a49;--o:#2f6aa3;--c:#a86a0c;--a:#b3261e;--gb:#e1f2e8;--ob:#e1ebf6;--cb:#f8ecd6;--ab:#f9e1de}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#101613;--card:#18211c;--ink:#e8efea;--mute:#9aaaa1;--line:#2a372f;
+--g:#5fcf94;--o:#7db4ea;--c:#e8b45a;--a:#f0827a;--gb:#17332500;--ob:#15283a00;--cb:#3a2d1300;--ab:#3d1b1800}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+padding:env(safe-area-inset-top,0) 16px calc(env(safe-area-inset-bottom,0) + 24px)}
+main{max-width:640px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 0 8px}
+h1{font-size:22px;margin:0;letter-spacing:-.01em}
+#lang{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;font:inherit;font-weight:600}
+#q{width:100%;font:inherit;font-size:17px;padding:13px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
+#q:focus,button:focus-visible{outline:3px solid var(--o);outline-offset:1px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.chip{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:20px;padding:6px 13px;font:inherit;font-size:14px}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tip{font-size:14px;color:var(--mute);margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-left-width:6px;border-radius:10px;padding:12px 14px;margin:0 0 10px}
+.card.g{border-left-color:var(--g)}.card.o{border-left-color:var(--o)}.card.c{border-left-color:var(--c)}.card.a{border-left-color:var(--a)}
+.top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.card h2{font-size:18px;margin:0}
+.sub{font-size:14px;color:var(--mute)}
+.badge{font-size:13px;font-weight:700;border-radius:6px;padding:2px 9px;white-space:nowrap}
+.g .badge{background:var(--gb);color:var(--g)}.o .badge{background:var(--ob);color:var(--o)}
+.c .badge{background:var(--cb);color:var(--c)}.a .badge{background:var(--ab);color:var(--a)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .badge{background:var(--line)}}
+.gi{font-size:14px;margin:6px 0 2px;font-weight:600}
+.card p{margin:4px 0 0;font-size:15px}
+.empty,.foot{color:var(--mute);font-size:14px}
+.foot{margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<main>
+<header><h1 id="title"></h1><button id="lang" type="button" aria-label="Language"></button></header>
+<input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false">
+<div class="chips" id="chips" role="group"></div>
+<p class="tip" id="tip"></p>
+<div id="list" aria-live="polite"></div>
+<p class="foot" id="foot"></p>
+</main>
+<script>
+var UI={
+en:{title:"Sweet Verdict",ph:"Search: stevia, E965, maltodextrin…",all:"All",
+cat:{g:"✓ Good",o:"~ Ok",c:"! Caution",a:"✕ Avoid"},
+tip:"GI (glycemic index) shows how fast a food raises blood sugar. Pure glucose = 100, table sugar ≈ 65.",
+none:"Nothing found. Try the English name, the Russian name or the E-number.",
+foot:"Rated for pre-diabetes and weight loss. General information, not medical advice; GI values are approximate and vary by source. Ask your doctor or dietitian about your own case. Tip: 'sugar-free' only means no table sugar. Always read the full ingredient list."},
+ru:{title:"Сладкий вердикт",ph:"Поиск: стевия, E965, мальтодекстрин…",all:"Все",
+cat:{g:"✓ Хорошо",o:"~ Нормально",c:"! Осторожно",a:"✕ Избегать"},
+tip:"ГИ (гликемический индекс) показывает, как быстро продукт повышает сахар в крови. Чистая глюкоза = 100, сахар ≈ 65.",
+none:"Ничего не найдено. Попробуйте английское или русское название либо E-номер.",
+foot:"Оценка для преддиабета и снижения веса. Это общая информация, а не медицинский совет; значения ГИ приблизительны и зависят от источника. Свой случай обсудите с врачом или диетологом. Совет: «без сахара» значит лишь «без столового сахара». Всегда читайте полный состав."}};
+var D=[
+{n:["Stevia","Стевия"],a:"E960 steviol glycosides rebaudioside стевиозид ребаудиозид",c:"g",gi:"0",
+t:["Plant extract, 200–300× sweeter than sugar. Does not raise blood sugar. Can taste bitter. Check the label: stevia products are often bulked with erythritol, dextrose or maltodextrin.","Экстракт растения, в 200–300 раз слаще сахара. Сахар в крови не повышает. Может горчить. Читайте состав: в стевии часто добавляют эритрит, декстрозу или мальтодекстрин."]},
+{n:["Monk fruit","Архат (монк-фрукт)"],a:"luo han guo mogroside могрозид ло хань го",c:"g",gi:"0",
+t:["Fruit extract, 150–250× sweeter than sugar. Does not raise blood sugar. Usually sold mixed with erythritol or dextrose, so check the label.","Экстракт плода, в 150–250 раз слаще сахара. Сахар не повышает. Обычно продаётся в смеси с эритритом или декстрозой, проверяйте состав."]},
+{n:["Allulose","Аллюлоза"],a:"psicose психоза rare sugar",c:"g",gi:"≈0",
+t:["Rare sugar found in figs and raisins. Almost no calories and barely raises blood sugar. Large amounts cause gas or diarrhea. May not be legal to sell in the EU, so check availability.","Редкий сахар из инжира и изюма. Почти без калорий, сахар почти не повышает. Много — вызывает газы и понос. В ЕС может быть не разрешена к продаже."]},
+{n:["Sucralose","Сукралоза"],a:"E955 splenda",c:"o",gi:"0",
+t:["Artificial, ~600× sweeter than sugar. Pure sucralose does not raise blood sugar. Some studies suggest effects on gut bacteria and insulin response; evidence is mixed. Powder packets (e.g. Splenda) are mostly maltodextrin or dextrose.","Искусственный, в ~600 раз слаще сахара. Чистая сукралоза сахар не повышает. Есть данные о влиянии на микрофлору и инсулин, но они противоречивы. Порошковые пакетики (Splenda) — в основном мальтодекстрин или декстроза."]},
+{n:["Aspartame","Аспартам"],a:"E951 nutrasweet",c:"o",gi:"0",
+t:["Artificial, ~200×. No blood sugar effect. Dangerous for people with phenylketonuria. In 2023 the WHO cancer agency rated it 'possibly carcinogenic' on limited evidence; the food-safety committee kept the daily limit at 40 mg per kg body weight.","Искусственный, ~в 200 раз слаще. На сахар не влияет. Опасен при фенилкетонурии. В 2023 году онкологическое агентство ВОЗ отнесло его к «возможно канцерогенным» по ограниченным данным; комитет по безопасности пищи оставил лимит 40 мг на кг веса в сутки."]},
+{n:["Acesulfame K","Ацесульфам калия"],a:"E950 ace-k acesulfame potassium ацесульфам-К",c:"o",gi:"0",
+t:["Artificial, ~200×. No blood sugar effect. Usually blended with other sweeteners. Less studied long-term; some animal studies raise gut-bacteria concerns.","Искусственный, ~в 200 раз слаще. На сахар не влияет. Обычно в смеси с другими подсластителями. Долгосрочно изучен меньше; в опытах на животных есть вопросы по микрофлоре."]},
+{n:["Saccharin","Сахарин"],a:"E954",c:"o",gi:"0",
+t:["Oldest artificial sweetener, 300× sweeter. No blood sugar effect. Metallic aftertaste. The old cancer scare came from rat studies that do not apply to humans.","Старейший искусственный подсластитель, в 300 раз слаще. Сахар не повышает. Металлический привкус. Давний страх рака основан на опытах на крысах, к людям не относится."]},
+{n:["Cyclamate","Цикламат"],a:"E952 sodium cyclamate цикламат натрия",c:"o",gi:"0",
+t:["Artificial, 30–50× sweeter. No blood sugar effect. Banned in the US, allowed in the EU and Russia. Often mixed with saccharin.","Искусственный, в 30–50 раз слаще. Сахар не повышает. Запрещён в США, разрешён в ЕС и России. Часто смешивают с сахарином."]},
+{n:["Erythritol","Эритрит"],a:"E968 erythritol эритритол",c:"o",gi:"0–1",
+t:["Sugar alcohol, ~70% as sweet as sugar, almost no calories. Does not raise blood sugar. Large amounts cause bloating. A 2023–2024 study linked high blood levels to heart attacks and strokes; that shows association, not proof, but matters since obesity raises heart risk.","Сахарный спирт, ~70% сладости сахара, почти без калорий. Сахар не повышает. Много — вздутие. Исследование 2023–2024 связало высокий уровень в крови с инфарктами и инсультами; это связь, а не доказательство, но при ожирении риск для сердца важен."]},
+{n:["Xylitol","Ксилит"],a:"E967 xylitol",c:"c",gi:"≈12",
+t:["Sugar alcohol, as sweet as sugar, ~2.4 kcal/g. Small blood sugar rise. Moderate amounts cause gas and diarrhea. Very toxic to dogs. A 2024 study showed a heart-risk association like erythritol's.","Сахарный спирт, сладкий как сахар, ~2,4 ккал/г. Немного повышает сахар. Умеренные дозы вызывают газы и понос. Очень ядовит для собак. Исследование 2024 года показало связь с риском для сердца, как у эритрита."]},
+{n:["Sorbitol","Сорбит"],a:"E420 sorbitol сорбитол",c:"c",gi:"≈9",
+t:["Sugar alcohol, ~60% as sweet as sugar, ~2.6 kcal/g. Small blood sugar rise. Strong laxative effect. Common in 'diabetic' sweets.","Сахарный спирт, ~60% сладости сахара, ~2,6 ккал/г. Немного повышает сахар. Сильное слабительное действие. Часто в «диабетических» сладостях."]},
+{n:["Mannitol","Маннит"],a:"E421 mannitol маннитол",c:"c",gi:"≈0",
+t:["Sugar alcohol, half as sweet as sugar. Barely raises blood sugar but is a laxative and causes bloating. Often used as a coating on chewing gum and tablets.","Сахарный спирт, вдвое менее сладкий. Сахар почти не повышает, но слабит и вызывает вздутие. Часто в покрытии жвачек и таблеток."]},
+{n:["Isomalt","Изомальт"],a:"E953 isomalt",c:"c",gi:"2–9",
+t:["Sugar alcohol, ~50% as sweet, ~2 kcal/g. Small blood sugar rise. Common in sugar-free hard candies. Laxative in larger amounts.","Сахарный спирт, ~50% сладости, ~2 ккал/г. Слегка повышает сахар. Частый в леденцах «без сахара». В больших дозах слабит."]},
+{n:["Lactitol","Лактит"],a:"E966 lactitol",c:"c",gi:"≈6",
+t:["Sugar alcohol, ~40% as sweet, ~2 kcal/g. Small blood sugar rise. Used in sugar-free chocolate and baked goods. Laxative.","Сахарный спирт, ~40% сладости, ~2 ккал/г. Слегка повышает сахар. Используют в шоколаде и выпечке «без сахара». Слабит."]},
+{n:["Polydextrose","Полидекстроза"],a:"E1200 polydextrose",c:"c",gi:"5–7",
+t:["Synthetic fiber-like bulking agent, ~1 kcal/g. Not sweet itself; used with other sweeteners. Little blood sugar effect. Large amounts cause gas and diarrhea.","Синтетический волокнистый наполнитель, ~1 ккал/г. Сам не сладкий, используется вместе с подсластителями. На сахар влияет мало. Много — газы и понос."]},
+{n:["Inulin","Инулин"],a:"chicory root fiber цикорий волокна",c:"o",gi:"≈5",
+t:["Plant fiber (chicory root), mildly sweet. Barely raises blood sugar and feeds gut bacteria, but gas and bloating are common, especially at first.","Растительная клетчатка (корень цикория), слегка сладкая. Сахар почти не повышает и питает полезные бактерии, но часты газы и вздутие, особенно вначале."]},
+{n:["Maltitol","Мальтит"],a:"E965 maltitol syrup мальтитовый сироп hydrogenated starch hydrolysate гидрогенизированный",c:"a",gi:"35–52",
+t:["Sugar alcohol found in most 'sugar-free' chocolate. Raises blood sugar noticeably (GI 35–52 vs ~65 for sugar), ~2.1 kcal/g, causes gas and diarrhea. The worst sugar alcohol for you.","Сахарный спирт, есть в большинстве шоколада «без сахара». Заметно повышает сахар (ГИ 35–52 против ~65 у сахара), ~2,1 ккал/г, вызывает газы и понос. Худший из сахарных спиртов для вас."]},
+{n:["Maltodextrin","Мальтодекстрин"],a:"dextrin декстрин",c:"a",gi:"85–105",
+t:["Starch-derived powder, not sweet but pure carbohydrate. Raises blood sugar faster than table sugar. Hides in sweetener packets, protein bars and 'sugar-free' products.","Порошок из крахмала, не сладкий, но чистый углевод. Повышает сахар быстрее столового сахара. Прячется в пакетиках подсластителей, протеиновых батончиках и продуктах «без сахара»."]},
+{n:["Glucose (dextrose)","Глюкоза (декстроза)"],a:"dextrose glucose",c:"a",gi:"100",
+t:["The sugar your blood carries. Fastest possible blood sugar spike. Often added as a filler to sweetener tablets and powders.","Тот самый сахар крови. Самый быстрый скачок сахара. Часто добавляют как наполнитель в таблетки и порошки подсластителей."]},
+{n:["Glucose syrup","Глюкозный сироп"],a:"corn syrup patoka патока кукурузный сироп",c:"a",gi:"≈100",
+t:["Liquid made from starch, mostly glucose. Spikes blood sugar like glucose. Common in sweets and ice cream, sometimes in products labeled 'no added sugar'.","Жидкость из крахмала, в основном глюкоза. Повышает сахар как глюкоза. Часто в конфетах и мороженом, иногда в продуктах «без добавленного сахара»."]},
+{n:["Fructose","Фруктоза"],a:"fruit sugar плодовый сахар",c:"a",gi:"15–25",
+t:["Low GI is misleading. It barely moves blood sugar but is processed by the liver, where large amounts promote fatty liver, high triglycerides and insulin resistance. Same calories as sugar.","Низкий ГИ обманчив. Сахар почти не повышает, но перерабатывается печенью, и в больших количествах способствует жировой болезни печени, высоким триглицеридам и инсулинорезистентности. Калорий столько же, сколько в сахаре."]},
+{n:["High-fructose corn syrup","Глюкозо-фруктозный сироп"],a:"hfcs corn syrup кукурузный сироп гфс",c:"a",gi:"≈60–70",
+t:["Mix of glucose and fructose (42–55% fructose). Has the problems of both. Common in soda, sauces and snacks.","Смесь глюкозы и фруктозы (42–55% фруктозы). Сочетает вред обеих. Часто в газировке, соусах и снеках."]},
+{n:["Agave syrup","Сироп агавы"],a:"agave nectar нектар агавы",c:"a",gi:"10–20",
+t:["Sold as healthy because of low GI, but it is 70–90% fructose, so the same liver concerns apply. Same calories as sugar.","Продаётся как полезный из-за низкого ГИ, но на 70–90% состоит из фруктозы, поэтому риски для печени те же. Калорий как в сахаре."]},
+{n:["Sugar (sucrose)","Сахар (сахароза)"],a:"sucrose brown sugar cane sugar тростниковый коричневый",c:"a",gi:"≈65",
+t:["Half glucose, half fructose. The baseline everything else is compared to. Brown and cane sugar are nearly the same.","Половина глюкоза, половина фруктоза. Точка отсчёта для сравнения. Коричневый и тростниковый сахар почти не отличаются."]},
+{n:["Invert sugar","Инвертный сироп"],a:"invert syrup",c:"a",gi:"≈60",
+t:["Sucrose split into glucose and fructose. Acts like regular sugar. Common in candies and baked goods.","Сахароза, расщеплённая на глюкозу и фруктозу. Действует как обычный сахар. Часто в конфетах и выпечке."]},
+{n:["Honey","Мёд"],a:"honey",c:"a",gi:"45–60",
+t:["Natural but about 80% sugar. Small amounts of nutrients do not offset it. Only as a deliberate small treat.","Натуральный, но ~80% сахара. Следы полезных веществ этого не компенсируют. Только как небольшое осознанное лакомство."]},
+{n:["Maple, coconut, date and rice syrups","Кленовый, кокосовый, финиковый, рисовый сиропы и сахар"],a:"maple syrup coconut sugar date syrup rice syrup рисовый кленовый кокосовый сахар финиковый",c:"a",gi:"35–98",
+t:["All are mostly sugar. Coconut sugar's GI is lower than sugar's but it is ~70% sucrose. Rice syrup is nearly pure glucose (GI ≈ 98).","Все — в основном сахар. ГИ кокосового сахара ниже, но он на ~70% сахароза. Рисовый сироп почти чистая глюкоза (ГИ ≈ 98)."]},
+{n:["Tagatose","Тагатоза"],a:"rare sugar редкий сахар",c:"c",gi:"≈3",
+t:["Rare sugar related to fructose, ~90% as sweet as sugar, ~1.5 kcal/g. Barely raises blood sugar. Large amounts cause gas and diarrhea. Processed in the liver like fructose, and long-term data is limited.","Редкий сахар, родственник фруктозы, ~90% сладости сахара, ~1,5 ккал/г. Сахар почти не повышает. Много — газы и понос. Перерабатывается печенью, как фруктоза; долгосрочных данных мало."]},
+{n:["Trehalose","Трегалоза"],a:"mushroom sugar грибной сахар",c:"a",gi:"≈38",
+t:["Two glucose units joined together, ~45% as sweet as sugar. Your body splits it into glucose, so it raises blood sugar and has full calories. Often shown as a 'natural' sugar.","Две молекулы глюкозы, ~45% сладости сахара. Организм расщепляет её до глюкозы, поэтому сахар растёт, а калорий столько же. Часто подаётся как «натуральный» сахар."]},
+{n:["Isomaltulose","Изомальтулоза"],a:"palatinose палатиноза",c:"a",gi:"≈32",
+t:["Sugar made from sucrose, ~50% as sweet. Digested more slowly than sugar, but it is still a digestible sugar with full calories. Not a free pass.","Сахар, получаемый из сахарозы, ~50% сладости. Усваивается медленнее сахара, но это всё равно усваиваемый сахар с полной калорийностью. Не повод есть без ограничений."]},
+{n:["Glycerin","Глицерин"],a:"glycerol glycerine E422 глицерол",c:"c",gi:"≈3",
+t:["Syrupy sugar-alcohol-like liquid, ~60% as sweet. Little blood sugar effect, but calories are counted differently by country (2.4–4.3 kcal/g). Keeps bars and cakes moist. Large amounts cause headache and loose stools.","Сиропообразная жидкость, похожая на сахарные спирты, ~60% сладости. Сахар почти не повышает, но калорийность в разных странах считают по-разному (2,4–4,3 ккал/г). Сохраняет влажность батончиков и выпечки. Много — головная боль и жидкий стул."]},
+{n:["Neotame","Неотам"],a:"E961",c:"o",gi:"0",
+t:["Artificial, 7,000–13,000× sweeter than sugar, so only traces are used. No blood sugar effect. Rare on shelves; less studied than aspartame, its chemical relative.","Искусственный, в 7 000–13 000 раз слаще сахара, поэтому нужны лишь следы. Сахар не повышает. Встречается редко; изучен меньше аспартама, своего химического родственника."]},
+{n:["Advantame","Адвантам"],a:"E969",c:"o",gi:"0",
+t:["Artificial, ~20,000× sweeter than sugar. No blood sugar effect. Very rare; used in tiny amounts and little long-term data.","Искусственный, ~в 20 000 раз слаще сахара. Сахар не повышает. Очень редкий; применяют в крошечных дозах, долгосрочных данных мало."]},
+{n:["Thaumatin","Тауматин"],a:"E957 katemfe",c:"o",gi:"0",
+t:["Sweet protein from a West African fruit, ~2,000× sweeter than sugar. Digested as protein, so no blood sugar effect. Slow, licorice-like aftertaste. Rare.","Сладкий белок из африканского плода, ~в 2 000 раз слаще сахара. Усваивается как белок, поэтому сахар не повышает. Медленный лакричный привкус. Редкий."]},
+{n:["FOS (fructooligosaccharides)","ФОС (фруктоолигосахариды)"],a:"oligofructose олигофруктоза fiber клетчатка",c:"o",gi:"≈1",
+t:["Chicory-type fiber, mildly sweet. Barely raises blood sugar and feeds gut bacteria. Gas and bloating are common in larger amounts. Different from fructose.","Клетчатка типа цикория, слегка сладкая. Сахар почти не повышает и питает полезные бактерии. В больших дозах часты газы и вздутие. Не то же самое, что фруктоза."]},
+{n:["Resistant dextrin","Резистентный декстрин"],a:"soluble corn fiber nutriose fibersol растворимая кукурузная клетчатка",c:"o",gi:"low",
+t:["Despite 'dextrin' in the name, it is a fiber your body cannot digest, unlike maltodextrin. Little blood sugar effect. Larger amounts cause gas and bloating. Used in 'high-fiber' and 'low-sugar' products.","Несмотря на «декстрин» в названии, это клетчатка, которую организм не переваривает, в отличие от мальтодекстрина. На сахар влияет мало. Много — газы и вздутие. Используется в продуктах «с клетчаткой» и «с низким сахаром»."]},
+{n:["Molasses","Меласса"],a:"blackstrap черная патока тростниковая",c:"a",gi:"≈55",
+t:["Dark syrup left over from making sugar. Contains some iron and potassium, but is still 50–60% sugar. Raises blood sugar and has real calories.","Тёмный сироп, остающийся при производстве сахара. Содержит немного железа и калия, но всё равно на 50–60% состоит из сахара. Повышает сахар и калорийна."]},
+{n:["Jerusalem artichoke syrup","Сироп топинамбура"],a:"topinambur топинамбур yacon syrup сироп якона",c:"a",gi:"≈13",
+t:["Sold as 'diabetic-friendly' because of low GI, but as a syrup it is mostly fructose. The same liver concerns as fructose apply, and calories are close to sugar's.","Продаётся как «для диабетиков» из-за низкого ГИ, но в виде сиропа это в основном фруктоза. Те же риски для печени, что и у фруктозы; калорий почти как у сахара."]},
+{n:["Fruit juice concentrate","Концентрат фруктового сока"],a:"apple juice concentrate grape juice concentrate fruit sweetened яблочный виноградный концентрат",c:"a",gi:"≈50",
+t:["Fruit juice with the water and fiber removed, so it is mostly fructose and glucose. Lets labels say 'no added sugar', but your body treats it like sugar.","Фруктовый сок без воды и клетчатки, то есть в основном фруктоза и глюкоза. Позволяет писать на этикетке «без добавленного сахара», но организм воспринимает его как сахар."]}
+];
+var order={g:0,o:1,c:2,a:3},lang="en",filter="all",$=function(i){return document.getElementById(i)};
+lang=(navigator.language||"").slice(0,2)==="ru"?"ru":"en";
+try{lang=localStorage.getItem("lang")||lang}catch(e){}
+D.sort(function(x,y){return order[x.c]-order[y.c]});
+function chips(){var u=UI[lang],h='<button class="chip" aria-pressed="'+(filter==="all")+'" data-f="all">'+u.all+'</button>';
+for(var k in u.cat)h+='<button class="chip" aria-pressed="'+(filter===k)+'" data-f="'+k+'">'+u.cat[k]+'</button>';$("chips").innerHTML=h}
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function render(){var u=UI[lang],i=lang==="ru"?1:0,q=$("q").value.trim().toLowerCase(),h="";
+document.documentElement.lang=lang;$("title").textContent=u.title;document.title=u.title;$("q").placeholder=u.ph;
+$("tip").textContent=u.tip;$("foot").textContent=u.foot;$("lang").textContent=lang==="ru"?"EN":"RU";chips();
+D.forEach(function(d){if(filter!=="all"&&d.c!==filter)return;
+if(q&&(d.n.join(" ")+" "+d.a).toLowerCase().indexOf(q)<0)return;
+h+='<article class="card '+d.c+'"><div class="top"><div><h2>'+esc(d.n[i])+'</h2><div class="sub">'+esc(d.n[1-i])+'</div></div><span class="badge">'+u.cat[d.c]+'</span></div><div class="gi">GI: '+d.gi+'</div><p>'+esc(d.t[i])+'</p></article>'});
+$("list").innerHTML=h||'<p class="empty">'+u.none+'</p>'}
+$("q").addEventListener("input",render);
+$("lang").addEventListener("click",function(){lang=lang==="ru"?"en":"ru";try{localStorage.setItem("lang",lang)}catch(e){}render()});
+$("chips").addEventListener("click",function(e){var f=e.target.getAttribute("data-f");if(f){filter=f;render()}});
+render();
+</script>
+</body>
+</html>
